@@ -1,0 +1,277 @@
+// SvelterApp - Database Schema
+// Multi-tenant RBAC architecture with session-based authentication
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// ORGANIZATION (Company/Tenant)
+// ============================================
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  users    User[]
+  invites  Invite[]
+  roles    Role[]
+  settings OrganizationSettings?
+
+  @@map("organizations")
+}
+
+// ============================================
+// USER
+// ============================================
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  firstName    String    @map("first_name")
+  lastName     String    @map("last_name")
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Organization relation (nullable for SUPER_ADMIN)
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Role relation
+  roleId String @map("role_id")
+  role   Role   @relation(fields: [roleId], references: [id])
+
+  // Auth.js relations
+  sessions Session[]
+  accounts Account[]
+
+  // Audit logs
+  auditLogs AuditLog[]
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================
+// ROLE
+// ============================================
+model Role {
+  id             String   @id @default(cuid())
+  name           String   // SUPER_ADMIN, ADMIN, MANAGER, OPERATOR (unique per organization)
+  displayName    String   @map("display_name")
+  description    String?
+  level          Int      @default(1) // Hierarchy level: SUPER_ADMIN=4, ADMIN=3, MANAGER=2, OPERATOR=1
+  isSystem       Boolean  @default(false) @map("is_system")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Organization relation (nullable for SUPER_ADMIN and system roles)
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Relations
+  users       User[]
+  permissions RolePermission[]
+  invites     Invite[]
+
+  @@unique([name, organizationId])
+  @@index([organizationId])
+  @@map("roles")
+}
+
+// ============================================
+// PERMISSION
+// ============================================
+model Permission {
+  id          String @id @default(cuid())
+  resource    String // users, organizations, roles, vehicles, etc.
+  action      String // create, read, update, delete, manage
+  description String?
+
+  // Relations
+  roles RolePermission[]
+
+  @@unique([resource, action])
+  @@map("permissions")
+}
+
+// ============================================
+// ROLE_PERMISSION (Many-to-Many)
+// ============================================
+model RolePermission {
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+// ============================================
+// AUTH.JS - SESSION (Database Session Strategy)
+// ============================================
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ============================================
+// AUTH.JS - ACCOUNT (for future OAuth providers)
+// ============================================
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// ============================================
+// VERIFICATION TOKEN (for email verification, password reset)
+// ============================================
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// AUDIT LOG (for tracking important actions)
+// ============================================
+model AuditLog {
+  id             String   @id @default(cuid())
+  action         String   // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, etc.
+  resource       String   // users, organizations, etc.
+  resourceId     String?  @map("resource_id")
+  userId         String?  @map("user_id")
+  organizationId String?  @map("organization_id")
+  metadata       Json?    // Additional context data
+  ipAddress      String?  @map("ip_address")
+  userAgent      String?  @map("user_agent")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================
+// INVITE (User Invitations)
+// ============================================
+model Invite {
+  id             String   @id @default(cuid())
+  email          String
+  token          String   @unique
+  status         String   @default("PENDING")
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  roleId         String   @map("role_id")
+  role           Role     @relation(fields: [roleId], references: [id])
+
+  organizationId String?       @map("organization_id")
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+  @@index([status])
+  @@index([organizationId])
+  @@map("invites")
+}
+
+// ============================================
+// ORGANIZATION SETTINGS
+// ============================================
+model OrganizationSettings {
+  id        String   @id @default(cuid())
+  currency  String   @default("USD")
+  timezone  String   @default("UTC")
+  dateFormat String  @default("YYYY-MM-DD") @map("date_format")
+  timeFormat String  @default("24h") @map("time_format")
+  language  String   @default("en-US")
+  
+  // Address fields
+  addressStreet    String? @map("address_street")
+  addressCity      String? @map("address_city")
+  addressState     String? @map("address_state")
+  addressPostalCode String? @map("address_postal_code")
+  addressCountry   String? @map("address_country")
+  
+  phone    String?
+  email    String?
+  logo     String?
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // One-to-one relation with Organization
+  organizationId String      @unique @map("organization_id")
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  // Relations
+  taxIdentifiers TaxIdentifier[]
+
+  @@map("organization_settings")
+}
+
+// ============================================
+// TAX IDENTIFIER (for invoices and tax reporting)
+// ============================================
+model TaxIdentifier {
+  id        String   @id @default(cuid())
+  type      String   // VAT, GST, HST, TAX_ID, EIN, ABN, BUSINESS_NUMBER
+  value     String   // The actual tax identifier number
+  label     String   // Display label (e.g., "VAT Number", "GST Number")
+  taxRate   Float?   @map("tax_rate") // Tax rate percentage (e.g., 20.0 for 20%)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relation to Organization Settings
+  organizationSettingsId String @map("organization_settings_id")
+  organizationSettings   OrganizationSettings @relation(fields: [organizationSettingsId], references: [id], onDelete: Cascade)
+
+  @@index([organizationSettingsId])
+  @@map("tax_identifiers")
+}

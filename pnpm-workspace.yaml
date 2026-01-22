@@ -1,0 +1,12 @@
+onlyBuiltDependencies:
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+
+overrides:
+  cookie@<0.7.0: '>=0.7.0'
+  lodash@>=4.0.0 <=4.17.22: '>=4.17.23'
+  seroval@<1.4.1: '>=1.4.1'
+  seroval@<=1.4.0: '>=1.4.1'
+  sha.js@<=2.4.11: '>=2.4.12'
+  solid-js@<1.9.4: '>=1.9.4'
