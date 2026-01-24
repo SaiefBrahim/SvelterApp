@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="static/svelterapp-logo.png" alt="SvelterApp logo" width="120" height="120" />
+
 **A modern, production-ready SvelteKit dashboard starter with fully functional Role-Based Access Control (RBAC)**
 
 [![Svelte](https://img.shields.io/badge/Svelte-5.45.6-FF3E00?logo=svelte)](https://svelte.dev)
@@ -11,6 +13,16 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [Features](#-features) • [Getting Started](#-getting-started) • [Documentation](#-documentation) • [Contributing](#-contributing)
+
+<br />
+
+| Login | Dashboard |
+| --- | --- |
+| <img src="static/screenshots/login-screen.png" alt="Login screen" width="420" /> | <img src="static/screenshots/dashboard.png" alt="Dashboard" width="420" /> |
+| Users | Org settings |
+| <img src="static/screenshots/users-module.png" alt="Users module" width="420" /> | <img src="static/screenshots/org-settings.png" alt="Organization settings" width="420" /> |
+
+<img src="static/screenshots/dark-mode.png" alt="Dark mode" width="860" />
 
 </div>
 

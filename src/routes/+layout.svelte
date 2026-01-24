@@ -1,6 +1,7 @@
 <script lang="ts">
 	import "../app.css";
 	import { Toaster } from "$lib/components/ui/sonner";
+	import { NavigationProgress } from "$lib/components/ui/navigation-progress";
 	import { ModeWatcher } from "mode-watcher";
 	import { browser } from "$app/environment";
 	import { setLanguageTag, languageTag } from "$lib/paraglide-adapter";
@@ -43,6 +44,7 @@
 </svelte:head>
 
 <ModeWatcher />
+<NavigationProgress />
 <Toaster richColors position="top-right" />
 
 {@render children()}

@@ -8,7 +8,6 @@
     import { Input } from "$lib/components/ui/input";
     import { Badge } from "$lib/components/ui/badge";
     import { Label } from "$lib/components/ui/label";
-    import { Separator } from "$lib/components/ui/separator";
     import { Checkbox } from "$lib/components/ui/checkbox";
     import * as Dialog from "$lib/components/ui/dialog";
     import Shield from "@lucide/svelte/icons/shield";
