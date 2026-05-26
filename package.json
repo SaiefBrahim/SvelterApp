@@ -83,4 +83,8 @@
 		"tailwindcss": "^4.3.0",
 		"zod": "4.3.5"
 	}
+	,
+	"overrides": {
+		"@hono/node-server": "1.19.14"
+	}
 }
